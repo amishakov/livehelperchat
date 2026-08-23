@@ -82,10 +82,16 @@ class erLhcoreClassLog implements ezcBaseConfigurationInitializer {
         $cfg = erConfigClassLhConfig::getInstance();
         $defaultGroup = $cfg->getSetting( 'site', 'default_group', false );
         $defaultUser = $cfg->getSetting( 'site', 'default_user', false );
-
-        $writeAll = new ezcLogUnixFileWriter ( "cache", "default.log",204800, 5, $defaultUser, $defaultGroup);
-
-        $log->getMapper ()->appendRule ( new ezcLogFilterRule ( $filter, $writeAll, true ) );
+        try {
+            $writeAll = new ezcLogUnixFileWriter ( "cache", "default.log",204800, 5, $defaultUser, $defaultGroup);
+            $log->getMapper ()->appendRule ( new ezcLogFilterRule ( $filter, $writeAll, true ) );
+        } catch (Exception $e) {
+            if ($cfg->getSetting( 'site', 'debug_output', false ) === true) {
+                throw $e;
+            } else {
+                error_log($e->getMessage() . "\n" . $e->getTraceAsString());
+            }
+        }
     }
 
     //Set de write destination in relation to the level of message.

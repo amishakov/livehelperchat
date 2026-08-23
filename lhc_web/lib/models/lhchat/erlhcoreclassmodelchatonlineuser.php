@@ -468,26 +468,34 @@ class erLhcoreClassModelChatOnlineUser
     {
         $urlParts = parse_url($url);
 
-        if (!in_array($urlParts['scheme'],['http','https'])) {
-            throw new \Exception('Only HTTP/HTTPS and are supported!');
+        if (!is_array($urlParts) || !isset($urlParts['scheme']) || !in_array(strtolower($urlParts['scheme']), ['http','https'])) {
+            throw new \Exception('Only HTTP/HTTPS are supported!');
         }
 
+        $denyLocal = isset($paramsExecution['deny_local']) && $paramsExecution['deny_local'] === true;
+
         // Resolve hostname and reject private/loopback destinations
-        if (isset($paramsExecution['deny_local']) && $paramsExecution['deny_local'] === true) {
+        if ($denyLocal === true) {
             $host = $urlParts['host'] ?? '';
-            
-            if ($host === '' || $host === 'localhost') {
+            $port = isset($urlParts['port']) ? (int)$urlParts['port'] : (strtolower($urlParts['scheme']) === 'https' ? 443 : 80);
+
+            if ($host === '' || strtolower($host) === 'localhost') {
                 throw new \Exception('Blocked: private destination');
             }
 
-            $resolvedIp = gethostbyname($host);
+            // Literal IPs are validated as-is; hostnames are resolved once and then pinned below
+            if (filter_var($host, FILTER_VALIDATE_IP) !== false) {
+                $resolvedIp = $host;
+            } else {
+                $resolvedIp = gethostbyname($host);
 
-            if ($resolvedIp === $host || !filter_var($resolvedIp, FILTER_VALIDATE_IP)) {
-                throw new \Exception('Blocked: unresolvable host');
+                if ($resolvedIp === $host || filter_var($resolvedIp, FILTER_VALIDATE_IP) === false) {
+                    throw new \Exception('Blocked: unresolvable host');
+                }
             }
 
-            if (!filter_var($resolvedIp, FILTER_VALIDATE_IP,
-                    FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE)) {
+            if (filter_var($resolvedIp, FILTER_VALIDATE_IP,
+                    FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE) === false) {
                 throw new \Exception('Blocked: private/reserved IP');
             }
         }
@@ -500,7 +508,14 @@ class erLhcoreClassModelChatOnlineUser
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
         curl_setopt($ch, CURLOPT_USERAGENT, 'curl/7.29.0');
-        @curl_setopt($ch, CURLOPT_FOLLOWLOCATION, isset($paramsExecution['deny_local']) && $paramsExecution['deny_local'] === true); // Some hostings produces warning...
+
+        if ($denyLocal === true) {
+            // Pin DNS to the validated IP to prevent DNS rebinding / multi-record bypass
+            curl_setopt($ch, CURLOPT_RESOLVE, [$host . ':' . $port . ':' . $resolvedIp]);
+        }
+
+        // Redirects would bypass the validated destination
+        @curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false); // Some hostings produces warning...
         
         if (!empty($headers)) {
             curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
