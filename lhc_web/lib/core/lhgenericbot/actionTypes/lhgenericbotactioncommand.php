@@ -490,7 +490,7 @@ class erLhcoreClassGenericBotActionCommand {
                     $groupedFields = [];
 
                     $messagesGroupFieldAll = isset($action['content']['payload_arg_val_sum']) && !empty($action['content']['payload_arg_val_sum']) ? explode(',',$action['content']['payload_arg_val_sum']) : [];
-                    $messagesThresholdValue = isset($action['content']['payload_arg_val_trshl']) && !empty($action['content']['payload_arg_val_trshl']) ? (double)$action['content']['payload_arg_val_trshl'] : 0;
+                    $messagesThresholdValue = isset($action['content']['payload_arg_val_trshl']) && !empty($action['content']['payload_arg_val_trshl']) ? (float)$action['content']['payload_arg_val_trshl'] : 0;
 
                     foreach ($messages as $message) {
                         $messageVariables = $message->meta_msg_array;

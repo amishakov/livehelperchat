@@ -7,7 +7,11 @@
 <form action="" method="post" autocomplete="off" ng-non-bindable>
 
     <div class="form-group">
-        <label><input type="checkbox" value="on" name="enabled" <?php (isset($rc_data['enabled']) && $rc_data['enabled'] == 1) ? print 'checked="checked"' : ''?> /> <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('system/timezone','Enable');?></label>
+        <label><input type="checkbox" value="on" name="enabled" <?php (isset($rc_data['enabled']) && $rc_data['enabled'] == 1) ? print 'checked="checked"' : ''?> /> <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('system/timezone','Enable for back office');?></label>
+    </div>
+
+    <div class="form-group">
+        <label><input type="checkbox" value="on" name="enabled_chat" <?php (isset($rc_data['enabled_chat']) && $rc_data['enabled_chat'] == 1) ? print 'checked="checked"' : ''?> /> <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('system/timezone','Enable for chat protection');?></label>
     </div>
 
     <div class="form-group">

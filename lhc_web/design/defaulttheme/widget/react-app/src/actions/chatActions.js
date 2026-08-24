@@ -251,6 +251,11 @@ export function initOfflineForm(obj) {
         axios.post(window.lhcChat['base_url'] + "widgetrestapi/onlinesettings",  JSON.stringify(obj), defaultHeaders)
         .then((response) => {
             dispatch({type: "OFFLINE_FIELDS_UPDATED", data: response.data})
+            if (response.data.chat_catpcha && response.data.chat_catpcha.url) {
+                import('../lib/captcha').then((module) => {
+                    module.loadCaptchaScript(response.data.chat_catpcha.url, response.data.chat_catpcha.provider).catch((err) => console.error(err));
+                }).catch((err) => console.error(err));
+            }
             helperFunctions.sendMessageParent('widgetRendered',[]);
         })
         .catch((err) => {
@@ -277,6 +282,11 @@ export function initOnlineForm(obj) {
                }});
             } else {
                 dispatch({type: "ONLINE_FIELDS_UPDATED", data: response.data})
+                if (response.data.chat_catpcha && response.data.chat_catpcha.url) {
+                    import('../lib/captcha').then((module) => {
+                        module.loadCaptchaScript(response.data.chat_catpcha.url, response.data.chat_catpcha.provider).catch((err) => console.error(err));
+                    }).catch((err) => console.error(err));
+                }
             }
             helperFunctions.sendMessageParent('widgetRendered',[]);
         })
@@ -342,48 +352,98 @@ export function submitOnlineForm(obj) {
         }
 
         dispatch({type: "ONLINE_SUBMITTING"});
-        axios.post(window.lhcChat['base_url'] + "widgetrestapi/submitonline", JSON.stringify(obj), {withCredentials: true, headers : {'Content-Type': 'application/x-www-form-urlencoded'}})
-        .then((response) => {
 
-            // If validation contains invalid captcha update it instantly
-            if (response.data.success === false && response.data.errors.captcha) {
-                dispatch({type: "processStatus", data: 0});
-                getCaptcha(dispatch, submitOnlineForm, obj, getState);
-                if (!obj.fields['tscaptcha_resubmit']) {
-                    return;
+        const captchaSettings = state.chatwidget.getIn(['onlineData', 'chat_captcha']);
+
+        const doSubmit = () => {
+            axios.post(window.lhcChat['base_url'] + "widgetrestapi/submitonline", JSON.stringify(obj), {withCredentials: true, headers : {'Content-Type': 'application/x-www-form-urlencoded'}})
+            .then((response) => {
+
+                // If validation contains invalid captcha update it instantly
+                if (response.data.success === false && response.data.errors.captcha) {
+                    dispatch({type: "processStatus", data: 0});
+                    getCaptcha(dispatch, submitOnlineForm, obj, getState);
+                    if (!obj.fields['tscaptcha_resubmit']) {
+                        return;
+                    }
                 }
-            }
 
-            dispatch({type: "ONLINE_SUBMITTED", data: response.data});
+                dispatch({type: "ONLINE_SUBMITTED", data: response.data});
 
-            if (response.data.t) {
-                helperFunctions.sendMessageParent('botTrigger',[{'trigger' : response.data.t}]);
-            }
+                if (response.data.t) {
+                    helperFunctions.sendMessageParent('botTrigger',[{'trigger' : response.data.t}]);
+                }
 
-        })
-        .catch((err) => {
-            dispatch({type: "ONLINE_SUBMITT_REJECTED", data: err})
-        })
+            })
+            .catch((err) => {
+                dispatch({type: "ONLINE_SUBMITT_REJECTED", data: err})
+            })
+        };
+
+        // Mint provider captcha token before submitting
+        if (captchaSettings) {
+            import('../lib/captcha').then((module) => {
+                return module.resolveChatCaptcha(captchaSettings).then((tokenData) => {
+                    obj.fields = {...obj.fields, ...tokenData};
+                    doSubmit();
+                });
+            }).catch(() => {
+                // Captcha script/token unavailable -> submit anyway, server will return errors.captcha
+                doSubmit();
+            });
+        } else {
+            doSubmit();
+        }
     }
 }
 
 export function submitOfflineForm(obj) {
     return function(dispatch, getState) {
+
+        const state = getState();
+
         dispatch({type: "OFFLINE_SUBMITTING"});
-        axios.post(window.lhcChat['base_url'] + "widgetrestapi/submitoffline", (obj instanceof FormData ? obj : JSON.stringify(obj)) , {withCredentials: true, headers: { 'Content-Type': obj instanceof FormData ? 'multipart/form-data' : 'application/x-www-form-urlencoded'}})
-        .then((response) => {
-            // If validation contains invalid captcha update it instantly
-            if (response.data.success === false && response.data.errors.captcha) {
-                getCaptcha(dispatch, submitOfflineForm, obj, getState);
-                if (!obj.fields['tscaptcha_resubmit']) {
-                    return;
+
+        const captchaSettings = state.chatwidget.getIn(['offlineData', 'chat_captcha']);
+
+        const doSubmit = () => {
+            axios.post(window.lhcChat['base_url'] + "widgetrestapi/submitoffline", (obj instanceof FormData ? obj : JSON.stringify(obj)) , {withCredentials: true, headers: { 'Content-Type': obj instanceof FormData ? 'multipart/form-data' : 'application/x-www-form-urlencoded'}})
+            .then((response) => {
+                // If validation contains invalid captcha update it instantly
+                if (response.data.success === false && response.data.errors.captcha) {
+                    getCaptcha(dispatch, submitOfflineForm, obj, getState);
+                    const resubmitted = obj instanceof FormData ? JSON.parse(obj.get('document')).fields['tscaptcha_resubmit'] : obj.fields['tscaptcha_resubmit'];
+                    if (!resubmitted) {
+                        return;
+                    }
                 }
-            }
-            dispatch({type: "OFFLINE_SUBMITTED", data: response.data})
-        })
-        .catch((err) => {
-            dispatch({type: "OFFLINE_SUBMITT_REJECTED", data: err})
-        })
+                dispatch({type: "OFFLINE_SUBMITTED", data: response.data})
+            })
+            .catch((err) => {
+                dispatch({type: "OFFLINE_SUBMITT_REJECTED", data: err})
+            })
+        };
+
+        // Mint provider captcha token before submitting
+        if (captchaSettings) {
+            import('../lib/captcha').then((module) => {
+                return module.resolveChatCaptcha(captchaSettings).then((tokenData) => {
+                    if (obj instanceof FormData) {
+                        const currentDoc = JSON.parse(obj.get('document'));
+                        currentDoc.fields = {...currentDoc.fields, ...tokenData};
+                        obj.set('document', JSON.stringify(currentDoc));
+                    } else {
+                        obj.fields = {...obj.fields, ...tokenData};
+                    }
+                    doSubmit();
+                });
+            }).catch(() => {
+                // Captcha script/token unavailable -> submit anyway, server will return errors.captcha
+                doSubmit();
+            });
+        } else {
+            doSubmit();
+        }
     }
 }
 

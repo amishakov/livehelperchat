@@ -110,6 +110,29 @@ if (!isset($Errors)) {
     $chat->session_referrer = isset($requestPayload['fields']['r']) ? $requestPayload['fields']['r'] : '';
 
     $Errors = erLhcoreClassChatValidator::validateStartChat($inputData,$startDataFields,$chat, $additionalParams);
+
+    // Google reCAPTCHA / Cloudflare Turnstile validation (in addition to LHC fingerprint captcha)
+    $recaptchaData = erLhcoreClassModelChatConfig::fetch('recaptcha_data')->data_value;
+
+    if (!is_array($recaptchaData)) {
+        $recaptchaData = array();
+    }
+
+    if (empty($Errors) &&
+        (!isset($restAPI['ignore_captcha']) || $restAPI['ignore_captcha'] !== true) &&
+        isset($recaptchaData['enabled_chat']) && $recaptchaData['enabled_chat'] == 1) {
+
+        $chatCaptcha = \LiveHelperChat\Validators\CaptchaValidator::validateChatCaptcha(
+            (isset($requestPayload['fields']) && is_array($requestPayload['fields']) ? $requestPayload['fields'] : array()),
+            $recaptchaData,
+            'widget_chat_start'
+        );
+
+        if ($chatCaptcha['valid'] !== true) {
+            $Errors['captcha'] = erTranslationClassLhTranslation::getInstance()->getTranslation("chat/startchat","Your request was not processed as expected - but don't worry it was not your fault. Please re-submit your request. If you experience the same issue you will need to contact us via other means.") . ' Captcha validation failed.';
+        }
+    }
+
     // Check is visitor blocked based on previous data if present chat does not have a nick
     if (empty($Errors) &&
         erLhcoreClassModelChatConfig::fetch('track_online_visitors')->current_value == 1 &&

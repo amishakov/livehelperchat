@@ -24,6 +24,9 @@ if ( isset($_POST['StoreRecaptchaSettings']) ) {
         ),
         'enabled' => new ezcInputFormDefinitionElement(
             ezcInputFormDefinitionElement::OPTIONAL, 'boolean'
+        ),
+        'enabled_chat' => new ezcInputFormDefinitionElement(
+            ezcInputFormDefinitionElement::OPTIONAL, 'boolean'
         )
     );
 
@@ -67,6 +70,12 @@ if ( isset($_POST['StoreRecaptchaSettings']) ) {
         $data['enabled'] = 1;
     } else {
         $data['enabled'] = 0;
+    }
+
+    if ( $form->hasValidData( 'enabled_chat' ) && $form->enabled_chat == 1) {
+        $data['enabled_chat'] = 1;
+    } else {
+        $data['enabled_chat'] = 0;
     }
 
     $rcData->value = serialize($data);

@@ -1286,6 +1286,29 @@ if (isset($parametersDepartment['system']) && !empty($parametersDepartment['syst
     }
 }
 
+$recaptchaData = erLhcoreClassModelChatConfig::fetch('recaptcha_data')->data_value;
+
+if (
+    isset($recaptchaData['enabled_chat']) &&
+    $recaptchaData['enabled_chat'] == 1
+) {
+    $provider = isset($recaptchaData['provider']) ? $recaptchaData['provider'] : 'google';
+
+    if ($provider === 'turnstile') {
+        $outputResponse['chat_catpcha'] = array(
+            'provider' => 'turnstile',
+            'site_key' => isset($recaptchaData['turnstile_site_key']) ? $recaptchaData['turnstile_site_key'] : '',
+            'url' => 'https://challenges.cloudflare.com/turnstile/v0/api.js'
+        );
+    } else {
+        $outputResponse['chat_catpcha'] = array(
+            'provider' => 'google',
+            'site_key' => isset($recaptchaData['site_key']) ? $recaptchaData['site_key'] : '',
+            'url' => 'https://www.google.com/recaptcha/api.js?render=' . (isset($recaptchaData['site_key']) ? $recaptchaData['site_key'] : '')
+        );
+    }
+}
+
 erLhcoreClassChatEventDispatcher::getInstance()->dispatch('widgetrestapi.onlinesettings', array('ou_vid' => $Params['user_parameters_unordered']['vid'], 'output' => & $outputResponse));
 
 erLhcoreClassRestAPIHandler::outputResponse($outputResponse);

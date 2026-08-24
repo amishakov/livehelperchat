@@ -14,11 +14,13 @@ class CaptchaValidator {
 
         $normalizedData = array_merge(array(
             'enabled' => 0,
+            'enabled_chat' => 0,
             'provider' => 'google',
             'site_key' => '',
             'secret_key' => '',
             'turnstile_site_key' => '',
             'turnstile_secret_key' => '',
+            'score_threshold' => 0.5,
         ), $recaptchaData);
 
         $normalizedData['enabled'] = (int)$normalizedData['enabled'];
@@ -27,6 +29,10 @@ class CaptchaValidator {
         $normalizedData['secret_key'] = (string)$normalizedData['secret_key'];
         $normalizedData['turnstile_site_key'] = (string)$normalizedData['turnstile_site_key'];
         $normalizedData['turnstile_secret_key'] = (string)$normalizedData['turnstile_secret_key'];
+        $normalizedData['score_threshold'] = (float)$normalizedData['score_threshold'];
+        if ($normalizedData['score_threshold'] < 0 || $normalizedData['score_threshold'] > 1) {
+            $normalizedData['score_threshold'] = 0.5;
+        }
 
         return $normalizedData;
     }
@@ -62,7 +68,7 @@ class CaptchaValidator {
                 );
             }
 
-            return self::verifyGoogleRecaptchaV3($captchaSettings['secret_key'], $token, $context);
+            return self::verifyGoogleRecaptchaV3($captchaSettings['secret_key'], $token, $context, $captchaSettings['score_threshold']);
         }
 
         if ($captchaSettings['provider'] === 'turnstile') {
@@ -94,7 +100,79 @@ class CaptchaValidator {
         );
     }
 
-    public static function verifyGoogleRecaptchaV3(string $secretKey, string $token, string $context): array
+    public static function validateChatCaptcha(array $data, array $captchaSettings, string $context = 'widget_chat_start'): array
+    {
+        $captchaSettings = array_merge(array(
+            'enabled' => 0,
+            'enabled_chat' => 0,
+            'provider' => 'google',
+            'site_key' => '',
+            'secret_key' => '',
+            'turnstile_site_key' => '',
+            'turnstile_secret_key' => '',
+            'score_threshold' => 0.5,
+        ), $captchaSettings);
+
+        if ((int)$captchaSettings['enabled'] !== 1 || (int)$captchaSettings['enabled_chat'] !== 1) {
+            return array(
+                'valid' => true,
+                'provider' => $captchaSettings['provider'],
+                'reason' => 'disabled'
+            );
+        }
+
+        if ($captchaSettings['provider'] === 'google') {
+            if ($captchaSettings['site_key'] === '' || $captchaSettings['secret_key'] === '') {
+                return array(
+                    'valid' => false,
+                    'provider' => 'google',
+                    'reason' => 'config_missing'
+                );
+            }
+
+            $token = isset($data['g-recaptcha']) ? trim((string)$data['g-recaptcha']) : '';
+
+            if ($token === '') {
+                return array(
+                    'valid' => false,
+                    'provider' => 'google',
+                    'reason' => 'missing_token'
+                );
+            }
+
+            return self::verifyGoogleRecaptchaV3($captchaSettings['secret_key'], $token, $context, (float)$captchaSettings['score_threshold']);
+        }
+
+        if ($captchaSettings['provider'] === 'turnstile') {
+            if ($captchaSettings['turnstile_site_key'] === '' || $captchaSettings['turnstile_secret_key'] === '') {
+                return array(
+                    'valid' => false,
+                    'provider' => 'turnstile',
+                    'reason' => 'config_missing'
+                );
+            }
+
+            $token = isset($data['cf-turnstile-response']) ? trim((string)$data['cf-turnstile-response']) : '';
+
+            if ($token === '') {
+                return array(
+                    'valid' => false,
+                    'provider' => 'turnstile',
+                    'reason' => 'missing_token'
+                );
+            }
+
+            return self::verifyCloudflareTurnstile($captchaSettings['turnstile_secret_key'], $token, $context);
+        }
+
+        return array(
+            'valid' => false,
+            'provider' => 'unknown',
+            'reason' => 'provider_invalid'
+        );
+    }
+
+    public static function verifyGoogleRecaptchaV3(string $secretKey, string $token, string $context, float $scoreThreshold = 0.5): array
     {
         $response = self::postCaptchaVerifyRequest('https://www.google.com/recaptcha/api/siteverify', array(
             'secret' => $secretKey,
@@ -119,7 +197,7 @@ class CaptchaValidator {
             );
         }
 
-        if (!(isset($result['score']) && (float)$result['score'] >= 0.1)) {
+        if (!(isset($result['score']) && (float)$result['score'] >= $scoreThreshold)) {
             return array(
                 'valid' => false,
                 'provider' => 'google',
@@ -222,15 +300,12 @@ class CaptchaValidator {
         $responseBody = curl_exec($ch);
 
         if ($responseBody === false) {
-            curl_close($ch);
             return array(
                 'success' => false,
                 'data' => null,
                 'reason' => 'curl_exec_failed'
             );
         }
-
-        curl_close($ch);
 
         $decodedResponse = json_decode($responseBody, true);
 

@@ -29,7 +29,6 @@ if (isset($requestPayload['chat_id']) && isset($requestPayload['chat_hash'])) {
 }
 
 $inputData->validate_start_chat = $inputData->validate_start_chat = isset($requestPayload['mode']) && $requestPayload['mode'] == 'popup' ? true : false;
-$inputData->ignore_captcha = true;
 $inputData->priority = is_numeric($Params['user_parameters_unordered']['priority']) ? (int)$Params['user_parameters_unordered']['priority'] : false;
 $inputData->only_bot_online = isset($_POST['onlyBotOnline']) ? (int)$_POST['onlyBotOnline'] : 0;
 $inputData->vid = isset($requestPayload['vid']) && $requestPayload['vid'] != '' ? (string)$requestPayload['vid'] : '';
@@ -78,6 +77,26 @@ $additionalParams['offline'] = true;
 
 // Validate post data
 $Errors = erLhcoreClassChatValidator::validateStartChat($inputData,$startDataFields,$chat, $additionalParams);
+
+if (empty($Errors)) {
+    $recaptchaData = erLhcoreClassModelChatConfig::fetch('recaptcha_data')->data_value;
+
+    if (!is_array($recaptchaData)) {
+        $recaptchaData = array();
+    }
+
+    if (isset($recaptchaData['enabled_chat']) && $recaptchaData['enabled_chat'] == 1) {
+        $chatCaptcha = \LiveHelperChat\Validators\CaptchaValidator::validateChatCaptcha(
+            (isset($requestPayload['fields']) && is_array($requestPayload['fields']) ? $requestPayload['fields'] : array()),
+            $recaptchaData,
+            'widget_chat_start'
+        );
+
+        if ($chatCaptcha['valid'] !== true) {
+            $Errors['captcha'] = erTranslationClassLhTranslation::getInstance()->getTranslation("chat/startchat","Your request was not processed as expected - but don't worry it was not your fault. Please re-submit your request. If you experience the same issue you will need to contact us via other means.") . ' Captcha validation failed.';
+        }
+    }
+}
 
 if (empty($Errors) && isset($startDataFields['pre_conditions']) && !empty($startDataFields['pre_conditions'])) {
     $preConditions = json_decode($startDataFields['pre_conditions'], true);
