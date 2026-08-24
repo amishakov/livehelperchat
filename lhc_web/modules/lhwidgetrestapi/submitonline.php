@@ -209,7 +209,16 @@ if (empty($Errors)) {
             erLhcoreClassRestAPIHandler::importMessages($chat, $requestPayload['messages']);
         }
 
-        $paramsExecution = array();
+        $paramsExecution = [];
+
+        if (isset($requestPayload['fields']['trigger_args']) && is_array($requestPayload['fields']['trigger_args'])) {
+            $paramsExecution['replace_array'] = [];
+            foreach ($requestPayload['fields']['trigger_args'] as $argKey => $argVal) {
+                if (preg_match('/^\{message_invisible_([1-9]|10)\}$/', $argKey) && (is_int($argVal) || is_string($argVal))) {
+                    $paramsExecution['replace_array'][$argKey] = $argVal;
+                }
+            }
+        }
 
         // Handle subject
         if (isset($requestPayload['fields']['subject_id']) && is_numeric($requestPayload['fields']['subject_id'])) {
@@ -321,8 +330,9 @@ if (empty($Errors)) {
                             ) && !isset($requestPayload['bpayload']['payload'])) {
                                 $trigger = erLhcoreClassModelGenericBotTrigger::fetch($paramsExecution['trigger_id']);
                                 $paramsExecution['trigger_id_executed'] = $paramsExecution['trigger_id'];
+
                                 if (is_object($trigger)) {
-                                    erLhcoreClassGenericBotWorkflow::processTrigger($chat, $trigger);
+                                    erLhcoreClassGenericBotWorkflow::processTrigger($chat, $trigger, false, array('args' => $paramsExecution));
                                     $triggerEvent = erLhcoreClassModelGenericBotChatEvent::findOne(array('filter' => array('chat_id' => $chat->id)));
                                     unset($paramsExecution['trigger_id']); // Now we let default trigger to be executed
                                 }
@@ -436,17 +446,6 @@ if (empty($Errors)) {
             $trigger = erLhcoreClassModelGenericBotTrigger::fetch($additionalParams['theme']->bot_configuration_array['trigger_id']);
             $paramsExecution['trigger_id_executed'] = $additionalParams['theme']->bot_configuration_array['trigger_id'];
 
-            if (isset($requestPayload['fields']['trigger_args']) && is_array($requestPayload['fields']['trigger_args'])) {
-                if (!isset($paramsExecution['replace_array'])) {
-                    $paramsExecution['replace_array'] = [];
-                }
-                foreach ($requestPayload['fields']['trigger_args'] as $argKey => $argVal) {
-                    if (preg_match('/^\{message_invisible_([1-9]|10)\}$/', $argKey) && (is_int($argVal) || is_string($argVal))) {
-                        $paramsExecution['replace_array'][$argKey] = $argVal;
-                    }
-                }
-            }
-
             if (is_object($trigger)) {
                 erLhcoreClassGenericBotWorkflow::$setBotFlow = true;
                 erLhcoreClassGenericBotWorkflow::processTrigger($chat, $trigger, false, array('args' => $paramsExecution));
@@ -503,17 +502,6 @@ if (empty($Errors)) {
             $paramsExecution['processed'] = $requestPayload['bpayload']['processed'];
         } else if (is_numeric($inputData->trigger_id)) {
             $paramsExecution['trigger_id'] = $inputData->trigger_id;
-
-            if (isset($requestPayload['fields']['trigger_args']) && is_array($requestPayload['fields']['trigger_args'])) {
-                if (!isset($paramsExecution['replace_array'])) {
-                    $paramsExecution['replace_array'] = [];
-                }
-                foreach ($requestPayload['fields']['trigger_args'] as $argKey => $argVal) {
-                    if (preg_match('/^\{message_invisible_([1-9]|10)\}$/', $argKey) && (is_int($argVal) || is_string($argVal))) {
-                        $paramsExecution['replace_array'][$argKey] = $argVal;
-                    }
-                }
-            }
         }
 
         if (
