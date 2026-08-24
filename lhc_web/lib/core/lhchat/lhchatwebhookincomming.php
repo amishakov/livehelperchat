@@ -2594,6 +2594,9 @@ class erLhcoreClassChatWebhookIncoming {
         );
 
         if ($getMime == false) {
+            if (in_array($mimeType, ['application/vnd.rar', 'application/x-rar', 'application/rar'])) {
+                return 'rar';
+            }
             return array_search($mimeType,$mime_types);
         } else {
             return $mime_types[$mimeType] ?? null;
