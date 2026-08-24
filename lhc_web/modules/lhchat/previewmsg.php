@@ -11,6 +11,7 @@ $chat = erLhcoreClassModelChat::fetch($msg->chat_id);
 $tpl = erLhcoreClassTemplate::getInstance('lhchat/previewmsg.tpl.php');
 
 if ( erLhcoreClassChat::hasAccessToRead($chat) ) {
+    $tpl->set('chat',$chat);
     $tpl->set('msg',$msg->getState());
     $tpl->set('metaMessageData',$msg->meta_msg_array);
     $tpl->set('see_sensitive_information', !((int)erLhcoreClassModelChatConfig::fetch('guardrails_enabled')->current_value == 1) || $currentUser->hasAccessTo('lhchat','see_sensitive_information'));
