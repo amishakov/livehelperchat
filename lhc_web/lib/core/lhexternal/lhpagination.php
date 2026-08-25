@@ -18,6 +18,8 @@ class lhPaginator {
     var $lastArrayNumber;
     var $prev_page;
     var $next_page;
+    var $limit_indicator = null;
+    var $approx_total = false;
 	
 	function __construct()
 	{		
@@ -33,10 +35,18 @@ class lhPaginator {
 	    $this->items_per_page = $itemsPerPage;		
 		$this->low = ($this->current_page-1) * $this->items_per_page;
 	}
+
+	function setLimitIndicator($limit)
+	{
+	    if ((int)$limit > 0) {
+	        $this->limit_indicator = (int)$limit;
+	    }
+	}
 	
 	function paginate()
 	{				
 		$this->num_pages = ceil($this->items_total/$this->items_per_page);		
+		$this->approx_total = ($this->limit_indicator !== null && (int)$this->items_total === $this->limit_indicator);
 		if($this->current_page > $this->num_pages) $this->current_page = $this->num_pages;
 		$prev_page = $this->current_page-1;
 		$this->next_page = $this->current_page+1;

@@ -414,7 +414,15 @@ try {
     $filterCount = $filterParams['filter'];
     unset($filterCount['sort']);
 
-    $pages->items_total = is_numeric($rowsNumber) ? $rowsNumber : erLhcoreClassModelMailconvConversation::getCount($filterCount);
+    $limitIndicator = ($filterParams['input_form']->all_set === true) ? false : 1000;
+
+    if (is_numeric($rowsNumber)) {
+        $pages->items_total = $rowsNumber;
+    } else {
+        $pages->items_total = erLhcoreClassModelMailconvConversation::getCount(array_merge($filterCount, array('limit_count' => $limitIndicator)));
+        $pages->setLimitIndicator($limitIndicator);
+    }
+
     $pages->translationContext = 'chat/activechats';
     $pages->serverURL = erLhcoreClassDesign::baseurl('mailconv/conversations') . $append;
     if ($filterParams['input']->ipp > 0) {

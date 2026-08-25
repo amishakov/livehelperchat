@@ -262,24 +262,49 @@ trait erLhcoreClassDBTrait
 
         $q = $session->database->createSelectQuery();
 
-        if ($rawSelect === false) {
-            $q->select($operation . "(" . self::$dbTable . "." . ($field === false ? self::$dbTableId : $field) . ")")->from(self::$dbTable);
+        if (isset($params['limit_count']) && (int)$params['limit_count'] > 0 && $rawSelect === false && $groupedCount === false && !isset($params['group'])) {
+
+            // Cap how many rows COUNT scans by counting only the first N matching rows.
+            // This avoids a full-table scan / long-running COUNT on large filtered result sets.
+            $limitCount = (int)$params['limit_count'];
+            $sub = $q->subSelect();
+            $sub->select(self::$dbTable . '.' . ($field === false ? self::$dbTableId : $field))->from(self::$dbTable);
+
+            $conditions = self::getConditions($params, $sub);
+
+            if (count($conditions) > 0) {
+                $sub->where($conditions);
+            }
+
+            if (isset($params['sort']) && $params['sort'] !== false) {
+                $sub->orderBy($params['sort']);
+            }
+
+            $sub->limit($limitCount, 0);
+
+            $q->select('COUNT(*)')->from($q->alias($sub, 'cnt_limited'));
+
         } else {
-            $q->select($rawSelect)->from(self::$dbTable);
-        }
 
-        $conditions = self::getConditions($params, $q);
+            if ($rawSelect === false) {
+                $q->select($operation . "(" . self::$dbTable . "." . ($field === false ? self::$dbTableId : $field) . ")")->from(self::$dbTable);
+            } else {
+                $q->select($rawSelect)->from(self::$dbTable);
+            }
 
-        if (count($conditions) > 0) {
-            $q->where($conditions);
-        }
+            $conditions = self::getConditions($params, $q);
 
-        if (isset($params['limit']) && $params['limit'] !== false) {
-            $q->limit($params['limit'], (isset($params['offset']) ? $params['offset'] : 0));
-        }
+            if (count($conditions) > 0) {
+                $q->where($conditions);
+            }
 
-        if (isset($params['sort']) && $params['sort'] !== false) {
-            $q->orderBy($params['sort']);
+            if (isset($params['limit']) && $params['limit'] !== false) {
+                $q->limit($params['limit'], (isset($params['offset']) ? $params['offset'] : 0));
+            }
+
+            if (isset($params['sort']) && $params['sort'] !== false) {
+                $q->orderBy($params['sort']);
+            }
         }
 
         $stmt = $q->prepare();

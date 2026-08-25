@@ -378,7 +378,18 @@ try {
     unset($filterCount['sort']);
 
     $pages = new lhPaginator();
-    $pages->items_total = ($hnmSortWarning ?? false) ? 0 : (is_numeric($rowsNumber) ? $rowsNumber : erLhcoreClassModelChat::getCount($filterCount));
+
+    $limitIndicator = ($filterParams['input_form']->all_set === true) ? false : 1000;
+
+    if ($hnmSortWarning ?? false) {
+        $pages->items_total = 0;
+    } elseif (is_numeric($rowsNumber)) {
+        $pages->items_total = $rowsNumber;
+    } else {
+        $pages->items_total = erLhcoreClassModelChat::getCount(array_merge($filterCount, array('limit_count' => $limitIndicator)));
+        $pages->setLimitIndicator($limitIndicator);
+    }
+
     $pages->translationContext = 'chat/pendingchats';
     $pages->serverURL = erLhcoreClassDesign::baseurl('chat/list').$append;
     if ($filterParams['input']->ipp > 0) {

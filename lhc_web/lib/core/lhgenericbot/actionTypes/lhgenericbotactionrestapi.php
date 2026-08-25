@@ -2454,6 +2454,43 @@ class erLhcoreClassGenericBotActionRestapi
         return $userData['dynamic_variables'];
     }
 
+
+    public static function getUserLanguage($chat) {
+
+        $siteAccessForChat = '';
+        $contentLanguageName = '';
+
+        $chatLocale = (isset($chat->chat_locale) ? $chat->chat_locale : '');
+
+        if ($chatLocale != '') {
+            $db = ezcDbInstance::get();
+            $stmt = $db->prepare('SELECT `siteaccess`, `name` FROM `lh_speech_language` INNER JOIN `lh_speech_language_dialect` ON `lh_speech_language_dialect`.`language_id` = `lh_speech_language`.`id` WHERE (`lh_speech_language_dialect`.`lang_code` = :lang_code OR `lh_speech_language_dialect`.`short_code` = :short_code) LIMIT 1');
+            $stmt->bindValue(':lang_code', $chatLocale, PDO::PARAM_STR);
+            $stmt->bindValue(':short_code', $chatLocale, PDO::PARAM_STR);
+            $stmt->execute();
+
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (is_array($row)) {
+                $siteAccessForChat = $row['siteaccess'];
+                $contentLanguageName = isset($row['name']) ? $row['name'] : '';
+            }
+        }
+
+        if (empty($siteAccessForChat)) {
+            $siteAccessForChat = erConfigClassLhConfig::getInstance()->getSetting('site', 'default_site_access');
+        }
+
+        $siteAccessOptions = erConfigClassLhConfig::getInstance()->getSetting('site_access_options', $siteAccessForChat);
+
+        return [
+            'user_locale' => isset($siteAccessOptions['locale']) ? $siteAccessOptions['locale'] : '',
+            'user_site_access' => $siteAccessForChat,
+            'user_content_language' => isset($siteAccessOptions['content_language']) ? $siteAccessOptions['content_language'] : '',
+            'user_content_language_name' => $contentLanguageName,
+        ];
+    }
+
     public static function extractDynamicVariables($methodSettings, $chat, $paramsCustomer = []) {
 
          $dynamicVariables = [];
@@ -2467,6 +2504,31 @@ class erLhcoreClassGenericBotActionRestapi
          );
          
          array_walk_recursive($methodSettings, function ($item, $key, $userData) {
+
+             // Resolve user locale / site access / content language only when any of
+             // those variables is actually used.
+             if (!isset($userData['dynamic_variables']['{{user_locale}}'])) {
+                 $itemLocaleCheck = is_string($item) ? $item : '';
+                 $keyLocaleCheck = is_string($key) ? $key : (string)$key;
+
+                 if (
+                     strpos($itemLocaleCheck, '{{user_locale}}') !== false ||
+                     strpos($itemLocaleCheck, '{{user_site_access}}') !== false ||
+                     strpos($itemLocaleCheck, '{{user_content_language}}') !== false ||
+                     strpos($itemLocaleCheck, '{{user_content_language_name}}') !== false ||
+                     strpos($keyLocaleCheck, '{{user_locale}}') !== false ||
+                     strpos($keyLocaleCheck, '{{user_site_access}}') !== false ||
+                     strpos($keyLocaleCheck, '{{user_content_language}}') !== false ||
+                     strpos($keyLocaleCheck, '{{user_content_language_name}}') !== false
+                 ) {
+                     $userLanguage = self::getUserLanguage($userData['chat']);
+
+                     $userData['dynamic_variables']['{{user_locale}}'] = $userLanguage['user_locale'];
+                     $userData['dynamic_variables']['{{user_site_access}}'] = $userLanguage['user_site_access'];
+                     $userData['dynamic_variables']['{{user_content_language}}'] = $userLanguage['user_content_language'];
+                     $userData['dynamic_variables']['{{user_content_language_name}}'] = $userLanguage['user_content_language_name'];
+                 }
+             }
 
              // Process both item and key in a single loop to extract variables
              foreach ([$item, $key] as $valueToProcess) {

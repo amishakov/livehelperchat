@@ -632,6 +632,10 @@ class erLhcoreClassModelChat {
            $this->referrer_params = parse_url($this->referrer);
            return $this->referrer_params;
 
+        case 'user_language':
+           $this->user_language = erLhcoreClassGenericBotActionRestapi::getUserLanguage($this);
+           return $this->user_language;
+
        	default:
        		break;
        }

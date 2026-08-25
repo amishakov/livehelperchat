@@ -49,6 +49,17 @@ $fieldsSearch['transfer_happened'] = array (
     )
 );
 
+$fieldsSearch['all_set'] = array (
+    'type' => 'boolean',
+    'trans' => 'groupby',
+    'required' => false,
+    'valid_if_filled' => false,
+    'filter_type' => 'none',
+    'validation_definition' => new ezcInputFormDefinitionElement(
+        ezcInputFormDefinitionElement::OPTIONAL, 'boolean'
+    )
+);
+
 $fieldsSearch['cls_time'] = array (
     'type' => 'boolean',
     'trans' => 'groupby',

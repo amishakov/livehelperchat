@@ -2398,7 +2398,7 @@ class erLhcoreClassChatValidator {
                 $locale = $languages[0];
 
                 $db = ezcDbInstance::get();
-                $stmt = $db->prepare('SELECT `siteaccess` FROM `lh_speech_language` INNER JOIN `lh_speech_language_dialect` ON `lh_speech_language_dialect`.`language_id` = `lh_speech_language`.`id` WHERE (`lh_speech_language_dialect`.`lang_code` = :lang_code OR `lh_speech_language_dialect`.`short_code` = :short_code)');
+                $stmt = $db->prepare('SELECT `siteaccess` FROM `lh_speech_language` INNER JOIN `lh_speech_language_dialect` ON `lh_speech_language_dialect`.`language_id` = `lh_speech_language`.`id` WHERE (`lh_speech_language_dialect`.`lang_code` = :lang_code OR `lh_speech_language_dialect`.`short_code` = :short_code) LIMIT 1');
                 $stmt->bindValue(':lang_code', $locale, PDO::PARAM_STR);
                 $stmt->bindValue(':short_code', $locale, PDO::PARAM_STR);
                 $stmt->execute();

@@ -115,6 +115,17 @@ $fieldsSearch['ipp'] = array (
     )
 );
 
+$fieldsSearch['all_set'] = array (
+    'type' => 'boolean',
+    'trans' => 'groupby',
+    'required' => false,
+    'valid_if_filled' => false,
+    'filter_type' => 'none',
+    'validation_definition' => new ezcInputFormDefinitionElement(
+        ezcInputFormDefinitionElement::OPTIONAL, 'boolean'
+    )
+);
+
 $fieldsSearch['subject'] = array (
     'type' => 'text',
     'trans' => 'Sort by',

@@ -3,7 +3,7 @@
 
 <nav>
     
-    <div class="found-total float-end"><?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('core/paginator','Page')?> <?php echo $pages->current_page?> <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('core/paginator','of')?> <?php echo $pages->num_pages?>, <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('core/paginator','Found')?> - <?php echo $pages->items_total?></div>
+    <div class="found-total float-end"><?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('core/paginator','Page')?> <?php echo $pages->current_page?> <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('core/paginator','of')?> <?php echo $pages->num_pages?>, <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('core/paginator','Found')?> - <?php if (isset($pages->approx_total) && $pages->approx_total === true) : ?><b>~</b><?php endif; ?><?php echo $pages->items_total?></div>
 
     <ul class="pagination paginator-lhc">
 

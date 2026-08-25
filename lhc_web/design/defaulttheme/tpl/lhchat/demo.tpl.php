@@ -20,6 +20,7 @@
     }
     var LHC_API = LHC_API||{};
     LHC_API.args = {
+        <?php if (erLhcoreClassSystem::instance()->SiteAccess != 'site_admin') : ?>lang:<?php echo json_encode(erLhcoreClassSystem::instance()->SiteAccess .'/');?>,<?php endif;?>
         mode:'widget',
         debug: <?php echo json_encode($debug)?>,
         lhc_base_url:'//<?php echo str_replace(['http://','https://'],'',erLhcoreClassSystem::getHost())?><?php echo erLhcoreClassDesign::baseurldirect()?>',

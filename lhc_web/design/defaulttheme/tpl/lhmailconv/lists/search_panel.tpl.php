@@ -338,6 +338,17 @@
             <div class="btn-group" role="group" aria-label="...">
                 <button class="btn btn-primary btn-sm" type="submit" name="doSearch"><span class="material-icons">search</span><?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','Search');?></button>
 
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="material-icons">settings_applications</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                    <li>
+                        <label class="dropdown-item mb-0 ps-2" title="<?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','Count all matching conversations instead of limiting to 1,000 (slower)');?>"><input type="checkbox" <?php $input->all_set == true ? print 'checked="checked"' : ''?> name="all_set" value="1"> <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','Exact count');?></label>
+                    </li>
+                    </ul>
+                </div>
+
                 <select name="ipp" class="form-control-sm rounded-0" onchange="this.form.submit()">
                     <option value="20" <?php if ($pages->items_per_page == 20) : ?>selected="selected"<?php endif; ?> ><?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','20 items per page');?></option>
                     <option value="40" <?php if ($pages->items_per_page == 40) : ?>selected="selected"<?php endif; ?> ><?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','40 items per page');?></option>

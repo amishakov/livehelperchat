@@ -724,6 +724,18 @@
 
             <div class="btn-group me-2" role="group" aria-label="...">
                 <button type="submit" class="btn btn-primary btn-sm no-wrap" name="doSearch"><span class="material-icons">search</span><?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','Search');?></button>
+
+                <div class="btn-group" role="group">
+                    <button type="button" class="btn btn-sm btn-primary dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
+                        <span class="material-icons">settings_applications</span>
+                    </button>
+                    <ul class="dropdown-menu">
+                    <li>
+                        <label class="dropdown-item mb-0 ps-2" title="<?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','Count all matching chats instead of limiting to 1,000 (slower)');?>"><input type="checkbox" <?php $input->all_set == true ? print 'checked="checked"' : ''?> name="all_set" value="1"> <?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','Exact count');?></label>
+                    </li>
+                    </ul>
+                </div>
+
                 <select class="form-control form-control-sm border-secondary rounded-0 border-end-0" name="sortby" onchange="this.form.submit()">
                     <option <?php if ($input->sortby == 'id_desc'|| $input->sortby == '') : ?>selected="selected"<?php endif; ?> value="id_desc"><?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','Newest first (default)');?></option>
                     <option <?php if ($input->sortby == 'id_asc') : ?>selected="selected"<?php endif; ?> value="id_asc"><?php echo erTranslationClassLhTranslation::getInstance()->getTranslation('chat/lists/search_panel','Oldest first');?></option>
