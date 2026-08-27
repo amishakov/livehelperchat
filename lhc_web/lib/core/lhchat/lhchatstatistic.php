@@ -2018,7 +2018,7 @@ class erLhcoreClassChatStatistic {
         $valuesArray = array();
         foreach ($objects as $object) {
             if ($object->$attr > 0) {
-                $valuesArray[] = (int)$object->$attr;
+                $valuesArray[] = (float)$object->$attr;
             }
         }
 
@@ -2087,7 +2087,7 @@ class erLhcoreClassChatStatistic {
 
         $stats = array();
         foreach ($attrToAverage as $attr) {
-            $stats[$attr] = self::getMedian($statistic,$attr);
+            $stats[$attr] = self::getMedian($statistic,$attr,0);
         }
 
         foreach ($stats as $attr => $value) {
