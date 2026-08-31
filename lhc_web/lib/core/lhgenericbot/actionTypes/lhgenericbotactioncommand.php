@@ -215,36 +215,50 @@ class erLhcoreClassGenericBotActionCommand {
 
         } elseif ($action['content']['command'] == 'closechat') {
 
-            $chat->pnd_time = time();
-            $chat->last_op_msg_time = time();
-            $chat->has_unread_messages = 0;
+            $db = ezcDbInstance::get();
 
-            if (isset($action['content']['close_widget']) && $action['content']['close_widget'] == true) {
-                // Send execute JS message
-                $msg = new erLhcoreClassModelmsg();
-                $msg->msg = '';
-                $msg->meta_msg = '{"content":{"execute_js":{"chat_event":"endChat","payload":""}}}';
-                $msg->chat_id = $chat->id;
-                $msg->user_id = isset($params['override_user_id']) && $params['override_user_id'] > 0 ? (int)$params['override_user_id'] : -2;
-                $msg->time = time();
-                if (isset($params['override_nick']) && !empty($params['override_nick'])) {
-                    $msg->name_support = (string)$params['override_nick'];
-                } else {
-                    $msg->name_support = erLhcoreClassGenericBotWorkflow::getDefaultNick($chat);
+            try {
+                $db->beginTransaction();
+                $chat->syncAndLock('`id`');
+
+                $chat->pnd_time = time();
+                $chat->last_op_msg_time = time();
+                $chat->has_unread_messages = 0;
+
+                if (isset($action['content']['close_widget']) && $action['content']['close_widget'] == true) {
+                    // Send execute JS message
+                    $msg = new erLhcoreClassModelmsg();
+                    $msg->msg = '';
+                    $msg->meta_msg = '{"content":{"execute_js":{"chat_event":"endChat","payload":""}}}';
+                    $msg->chat_id = $chat->id;
+                    $msg->user_id = isset($params['override_user_id']) && $params['override_user_id'] > 0 ? (int)$params['override_user_id'] : -2;
+                    $msg->time = time();
+                    if (isset($params['override_nick']) && !empty($params['override_nick'])) {
+                        $msg->name_support = (string)$params['override_nick'];
+                    } else {
+                        $msg->name_support = erLhcoreClassGenericBotWorkflow::getDefaultNick($chat);
+                    }
+                    $msg->saveThis();
                 }
-                $msg->saveThis();
-            }
 
-            $handler = erLhcoreClassChatEventDispatcher::getInstance()->dispatch('chat.genericbot_chat_command_transfer', array(
-                'action' => $action,
-                'chat' => & $chat,
-            ));
+                $chat->updateThis(['update' => ['pnd_time', 'last_op_msg_time', 'has_unread_messages']]);
 
-            if ($handler === false) {
-                erLhcoreClassChatHelper::closeChat(array(
+                $handler = erLhcoreClassChatEventDispatcher::getInstance()->dispatch('chat.genericbot_chat_command_transfer', array(
+                    'action' => $action,
                     'chat' => & $chat,
-                    'bot' => true
                 ));
+
+                if ($handler === false) {
+                    erLhcoreClassChatHelper::closeChat(array(
+                        'chat' => & $chat,
+                        'bot' => true
+                    ));
+                }
+
+                $db->commit();
+            } catch (\Exception $e) {
+                $db->rollback();
+                throw $e;
             }
 
         } elseif ($action['content']['command'] == 'chatattribute') {

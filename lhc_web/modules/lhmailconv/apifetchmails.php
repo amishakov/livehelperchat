@@ -8,6 +8,10 @@ try {
 
     $conv = erLhcoreClassModelMailconvConversation::fetch($Params['user_parameters']['id']);
 
+    if (!is_object($conv)) {
+        throw new Exception('Conversation was not found!');
+    }
+
     $cfg = erConfigClassLhConfig::getInstance();
     $worker = $cfg->getSetting( 'webhooks', 'worker' );
 
